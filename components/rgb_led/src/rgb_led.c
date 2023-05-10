@@ -27,6 +27,10 @@ QueueHandle_t keyled_q;
 
 void hsv2rgb(uint32_t h, uint32_t s, uint32_t v, uint32_t *r, uint32_t *g, uint32_t *b)
 {
+    // Clamp the brightness to the maximum value
+    if (v > MAX_BRIGHTNESS){
+        v = MAX_BRIGHTNESS;
+    }
     h %= 360; // h -> [0,360]
     uint32_t rgb_max = v * 2.55f;
     uint32_t rgb_min = rgb_max * (100 - s) / 100.0f;
@@ -172,7 +176,7 @@ void key_led_modes(void)
             if (new_mode != modes)
             {
                 rgb_key->clear(rgb_key, 50);
-                ESP_ERROR_CHECK(rgb_notif->clear(rgb_notif, 100));
+                ESP_ERROR_CHECK(rgb_notif->clear(rgb_notif, 50));
                 modes = new_mode;
             }
         }
@@ -265,8 +269,12 @@ void key_led_modes(void)
                     // Write RGB values to strip driver
                     ESP_ERROR_CHECK(rgb_key->set_pixel(rgb_key, j, red, green, blue));
                 }
+                // Set notification LEDs to same color as last key
+                ESP_ERROR_CHECK(rgb_notif->set_pixel(rgb_notif, 0, red, green, blue));
+                ESP_ERROR_CHECK(rgb_notif->set_pixel(rgb_notif, 1, red, green, blue));
                 // Flush RGB values to LEDs
                 ESP_ERROR_CHECK(rgb_key->refresh(rgb_key, 100));
+                ESP_ERROR_CHECK(rgb_notif->refresh(rgb_notif, 100));
                 vTaskDelay(pdMS_TO_TICKS(RGB_LED_REFRESH_SPEED));
                 rgb_key->clear(rgb_key, 50);
                 vTaskDelay(pdMS_TO_TICKS(RGB_LED_REFRESH_SPEED));
@@ -274,17 +282,20 @@ void key_led_modes(void)
             start_rgb += 60;
             break;
 
-        case 4: // Solid color
-
-            for (int i = 0; i < RGB_LED_KEYBOARD_NUMBER; i++)
-            {
-                // Write RGB values to strip driver
-                ESP_ERROR_CHECK(rgb_key->set_pixel(rgb_key, i, 255, 0, 0));
-            }
-            // Flush RGB values to LEDs
-            ESP_ERROR_CHECK(rgb_key->refresh(rgb_key, 100));
-            vTaskDelay(pdMS_TO_TICKS(RGB_LED_REFRESH_SPEED));
-
+            case 4: // Solid color
+                
+                for (int i = 0; i < RGB_LED_KEYBOARD_NUMBER; i++) {
+                    // Write RGB values to strip driver
+                    ESP_ERROR_CHECK(rgb_key->set_pixel(rgb_key, i, SOLID_RED, SOLID_GREEN, SOLID_BLUE));
+                }
+                // Set notification LEDs to same color as last key
+                ESP_ERROR_CHECK(rgb_notif->set_pixel(rgb_notif, 0, SOLID_RED, SOLID_GREEN, SOLID_BLUE));
+                ESP_ERROR_CHECK(rgb_notif->set_pixel(rgb_notif, 1, SOLID_RED, SOLID_GREEN, SOLID_BLUE));
+                // Flush RGB values to LEDs
+                ESP_ERROR_CHECK(rgb_key->refresh(rgb_key, 100));
+                ESP_ERROR_CHECK(rgb_notif->refresh(rgb_notif, 100));
+                vTaskDelay(pdMS_TO_TICKS(RGB_LED_REFRESH_SPEED));
+                
             break;
         }
     }
